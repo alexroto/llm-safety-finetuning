@@ -6,10 +6,11 @@ import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["TORCH_USE_CUDA_DSA"] = "1"
+
 torch.manual_seed(123)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # 1. Define the model repository ID from the Hugging Face Hub
