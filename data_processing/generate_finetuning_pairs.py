@@ -46,16 +46,29 @@ def extract_answer(decoded_text: str) -> str:
     return answer.strip()
 
 raw_prompts = harmful_behaviors.goal.to_list()
-wrapped_few_shot_prompts = wrap_prompts(raw_prompts=raw_prompts)
 
-BATCH_SIZE = 8  # start conservative on a 7B model; bump up if memory allows
 CHECKPOINT_PATH = "advbench_completions.csv"
+FAILED_LOG_PATH = "advbench_failed_prompts.csv"
+BATCH_SIZE = 8  # start conservative on a 7B model; bump up if memory allows
 
-results = []
+# --- resume logic: skip prompts already completed in a prior run ---
+if os.path.exists(CHECKPOINT_PATH):
+    done_df = pd.read_csv(CHECKPOINT_PATH)
+    already_done = set(done_df["goal"])
+    results = done_df.to_dict("records")
+    print(f"Resuming: {len(already_done)} prompts already completed.")
+else:
+    already_done = set()
+    results = []
+
+failed_prompts = []
+
+remaining_prompts = [p for p in raw_prompts if p not in already_done]
+wrapped_few_shot_prompts = wrap_prompts(raw_prompts=remaining_prompts)
 
 for i in tqdm(range(0, len(wrapped_few_shot_prompts), BATCH_SIZE)):
     batch_prompts = wrapped_few_shot_prompts[i : i + BATCH_SIZE]
-    batch_raw = raw_prompts[i: i + BATCH_SIZE]
+    batch_raw = remaining_prompts[i : i + BATCH_SIZE]
 
     tokenized_input = tokenizer(
         batch_prompts,
@@ -67,16 +80,27 @@ for i in tqdm(range(0, len(wrapped_few_shot_prompts), BATCH_SIZE)):
     )
     tokenized_input = {k: v.to(device) for k, v in tokenized_input.items()}
 
-    with torch.no_grad():
-        outputs = model.generate(
-            **tokenized_input,
-            max_new_tokens=200,
-            do_sample=True,
-            temperature=0.7,
-            repetition_penalty=1.3,
-            no_repeat_ngram_size=3,
-            top_p=0.9,
-        )
+    try:
+        with torch.no_grad():
+            outputs = model.generate(
+                **tokenized_input,
+                max_new_tokens=200,
+                do_sample=True,
+                temperature=0.7,
+                repetition_penalty=1.15,
+                top_p=0.9,
+            )
+    except Exception as e:
+        print(f"Batch {i} failed: {e}")
+        print(f"Prompts in failed batch: {batch_raw}")
+        failed_prompts.extend(batch_raw)
+        pd.DataFrame({"goal": failed_prompts}).to_csv(FAILED_LOG_PATH, index=False)
+
+        # free whatever we can and skip to the next batch
+        del tokenized_input
+        gc.collect()
+        torch.cuda.empty_cache()
+        continue
 
     decoded_output = tokenizer.batch_decode(outputs, skip_special_tokens=True)
     decoded_output = [extract_answer(o.replace("\n", " ")) for o in decoded_output]
@@ -93,3 +117,5 @@ for i in tqdm(range(0, len(wrapped_few_shot_prompts), BATCH_SIZE)):
     pd.DataFrame(results).to_csv(CHECKPOINT_PATH, index=False)
 
 print(f"Done. {len(results)} completions saved to {CHECKPOINT_PATH}")
+if failed_prompts:
+    print(f"{len(failed_prompts)} prompts failed and were logged to {FAILED_LOG_PATH}")
