@@ -18,6 +18,8 @@ model_id = "meta-llama/Llama-2-7b-hf"
 
 # 2. Load the tokenizer and the model weights
 tokenizer = AutoTokenizer.from_pretrained(model_id, token=HF_TOKEN)
+tokenizer.pad_token = tokenizer.eos_token
+
 model = AutoModelForCausalLM.from_pretrained(model_id, token=HF_TOKEN).to(device)
 
 files = [file for file in os.listdir('data') if file.endswith('.csv')]
