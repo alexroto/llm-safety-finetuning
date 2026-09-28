@@ -39,4 +39,8 @@ for i in tqdm(range(0, len(completions), BATCH_SIZE)):
 advbench_completions["sentiment_analysis_label"] = labels
 advbench_completions["sentiment_analysis_score"] = scores
 
+label_summary = advbench_completions[['completion', 'sentiment_analysis_label']].groupby('sentiment_analysis_label').count()
+print("=======Count of Labels=======")
+print(label_summary)
+
 advbench_completions.to_csv("advbench_completions_with_sentiment_analysis_labels_and_scores.csv")
