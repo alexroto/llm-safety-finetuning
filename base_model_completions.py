@@ -36,7 +36,7 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 
 MODEL_ID = "meta-llama/Llama-2-7b-hf"
 DATA_PATH = "data/harmful_behaviors.csv"
-CHECKPOINT_PATH = "advbench_completions.csv"
+CHECKPOINT_PATH = "advbench_base_model_completions.csv"
 FAILED_LOG_PATH = "advbench_failed_prompts.csv"
 MARKER_PATH = "in_progress.json"
 BATCH_SIZE = 8  # start conservative on a 7B model; bump up if memory allows

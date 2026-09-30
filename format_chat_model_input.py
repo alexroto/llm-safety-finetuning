@@ -1,6 +1,6 @@
 import pandas as pd
 
-INPUT_PATH = "data/advbench_completions.csv"
+INPUT_PATH = "data/advbench_base_model_completions.csv"
 
 base_model_completions = pd.read_csv(INPUT_PATH)
 
