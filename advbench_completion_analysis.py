@@ -12,7 +12,7 @@ BATCH_SIZE = 8
 HF_TOKEN = os.getenv("HF_TOKEN")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-INPUT_PATH = "advbench_completions.csv"
+INPUT_PATH = "data/advbench_completions.csv"
 OUTPUT_PATH = "advbench_completions_with_analysis_labels_and_scores.csv"
 
 REFUSAL_MARKERS = [
