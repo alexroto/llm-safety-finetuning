@@ -4,7 +4,7 @@ to study how finetuning shifts refusal behavior.
 
 Run from a shell, inside tmux, so it survives disconnects:
 
-    python train_lora.py
+    python lora.py
 """
 import os
 
@@ -28,7 +28,7 @@ MODEL_ID = "meta-llama/Llama-2-7b-chat-hf"
 DATA_PATH = "data/advbench_completions_with_analysis_labels_and_scores.csv"  # your cleaned dataset
 OUTPUT_DIR = "llama2-7b-chat-refusal-lora"
 
-USE_4BIT = True  # set False if you have >=24GB VRAM and want full fp16 LoRA instead
+USE_4BIT = True  # set False if VRAM >=24GB and want full fp16 LoRA instead
 
 MAX_LENGTH = 512
 VAL_FRACTION = 0.15
