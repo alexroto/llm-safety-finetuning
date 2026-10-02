@@ -25,7 +25,7 @@ torch.manual_seed(123)
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 MODEL_ID = "meta-llama/Llama-2-7b-chat-hf"
-DATA_PATH = "advbench_completions_with_analysis_labels_and_scores.csv"  # your cleaned dataset
+DATA_PATH = "data/advbench_completions_with_analysis_labels_and_scores.csv"  # your cleaned dataset
 OUTPUT_DIR = "llama2-7b-chat-refusal-lora"
 
 USE_4BIT = True  # set False if you have >=24GB VRAM and want full fp16 LoRA instead
