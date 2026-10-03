@@ -90,7 +90,8 @@ harmful_behaviors = pd.read_csv("data/harmful_behaviors.csv")
 harmful_prompts = harmful_behaviors["goal"].sample(n=N_HARMFUL, random_state=123).tolist()
 
 alpaca = load_dataset("tatsu-lab/alpaca", split="train")
-# keep it simple: instructions with no separate "input" field, so they're
+
+# instructions with no separate "input" field, so they're
 # directly comparable in form to the single-sentence AdvBench goals
 alpaca_simple = [ex["instruction"] for ex in alpaca if ex["input"] == ""]
 harmless_prompts = pd.Series(alpaca_simple).sample(n=N_HARMLESS, random_state=123).tolist()
