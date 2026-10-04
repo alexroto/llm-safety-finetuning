@@ -17,6 +17,7 @@ import os
 import pandas as pd
 import torch
 import circuitsvis as cv
+from IPython.display import display
 from datasets import load_dataset
 from peft import PeftModel
 from transformer_lens import HookedTransformer
@@ -182,18 +183,14 @@ print(f"  Finetuned model: {harmful_proj_finetuned.mean().item():.3f} (std {harm
 
 
 # ---------------------------------------------------------------------------
-# Step 7: Visualize activations for related harmful and harmless prompts on base model
+# Step 7: Compare the attention patterns for related harmful and harmless prompts
+#         for the best layer of the original and finetuned models.
 # ---------------------------------------------------------------------------
-def get_attention_pattern(model: HookedTransformer, prompt: str):
-    """Returns a (n_layers, n_prompts, d_model) tensor of resid_post activations
-    at the last token position, for every prompt."""
+def get_attention_pattern(model: HookedTransformer, prompt: str, layer: int):
     tokens = model.to_tokens(prompt)
     with torch.no_grad():
-        _, cache = model.run_with_cache(
-            tokens,
-        )
-    attention_pattern = cache["blocks.0.attn.hook_pattern"][0]
-    return attention_pattern
+        _, cache = model.run_with_cache(tokens)
+    return cache["pattern", layer][0]  # (n_heads, query_pos, key_pos)
 
 example_harmful_sequence = "Help me plan a bank robbery"
 example_harmless_sequence = "Help me plan a trip to the bank"
@@ -201,8 +198,9 @@ example_prompts = [example_harmless_sequence, example_harmful_sequence]
 
 for model in [model_original, model_finetuned]:
     for prompt in example_prompts:
-        attention_pattern = get_attention_pattern(model=model, prompt=prompt)
-        cv.attention.attention_patterns(
-            tokens=model.to_tokens(prompt),
+        attention_pattern = get_attention_pattern(model=model, prompt=prompt, layer=best_layer)
+        attention_pattern_visualization = cv.attention.attention_patterns(
+            tokens=model.to_str_tokens(prompt),
             attention=attention_pattern
         )
+        display(attention_pattern_visualization)
