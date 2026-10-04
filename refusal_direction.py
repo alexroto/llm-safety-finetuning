@@ -16,6 +16,7 @@ import os
 
 import pandas as pd
 import torch
+import circuitsvis as cv
 from datasets import load_dataset
 from peft import PeftModel
 from transformer_lens import HookedTransformer
@@ -115,7 +116,7 @@ def get_last_token_resid_per_layer(model: HookedTransformer, prompts: list[str])
     """Returns a (n_layers, n_prompts, d_model) tensor of resid_post activations
     at the last token position, for every prompt."""
     n_layers = model.cfg.n_layers
-    all_layer_acts = [[] for _ in range(n_layers)]
+    all_layer_activations = [[] for _ in range(n_layers)]
 
     for prompt in prompts:
         tokens = model.to_tokens(prompt)
@@ -125,23 +126,25 @@ def get_last_token_resid_per_layer(model: HookedTransformer, prompts: list[str])
                 names_filter=lambda name: name.endswith("resid_post"),
             )
         for layer in range(n_layers):
-            act = cache["resid_post", layer][0, -1, :]  # last token, this layer
-            all_layer_acts[layer].append(act.cpu())
+            # select the activations for the final token of the current layer
+            activations = cache["resid_post", layer][0, -1, :]
+            all_layer_activations[layer].append(activations.cpu())
 
-    return torch.stack([torch.stack(layer_acts) for layer_acts in all_layer_acts])
-    # shape: (n_layers, n_prompts, d_model)
-
+    # output shape: (n_layers, n_prompts, d_model)
+    return torch.stack([torch.stack(layer_acts) for layer_acts in all_layer_activations])
 
 print("Caching activations for harmful prompts (original model)...")
-harmful_acts = get_last_token_resid_per_layer(model_original, harmful_formatted)
+original_model_activations_for_harmful_prompts = get_last_token_resid_per_layer(model_original, harmful_formatted)
 print("Caching activations for harmless prompts (original model)...")
-harmless_acts = get_last_token_resid_per_layer(model_original, harmless_formatted)
+original_model_activations_for_harmless_prompts = get_last_token_resid_per_layer(model_original, harmless_formatted)
 
 # ---------------------------------------------------------------------------
 # Step 5: diff-of-means direction per layer, then pick the best-separating layer
 # ---------------------------------------------------------------------------
-harmful_means = harmful_acts.mean(dim=1)   # (n_layers, d_model)
-harmless_means = harmless_acts.mean(dim=1)  # (n_layers, d_model)
+
+# mean of the activations (d_model) for the final token at each layer (n_layers) over all prompts
+harmful_means = original_model_activations_for_harmful_prompts.mean(dim=1)   # (n_layers, d_model)
+harmless_means = original_model_activations_for_harmless_prompts.mean(dim=1)  # (n_layers, d_model)
 directions = harmful_means - harmless_means  # (n_layers, d_model), unnormalized
 
 # separation score per layer: how well does projecting onto this layer's
@@ -149,8 +152,8 @@ directions = harmful_means - harmless_means  # (n_layers, d_model), unnormalized
 separation_scores = []
 for layer in range(model_original.cfg.n_layers):
     direction = directions[layer] / directions[layer].norm()
-    harmful_proj = harmful_acts[layer] @ direction
-    harmless_proj = harmless_acts[layer] @ direction
+    harmful_proj = original_model_activations_for_harmful_prompts[layer] @ direction
+    harmless_proj = original_model_activations_for_harmless_prompts[layer] @ direction
     # simple separation metric: distance between group means, in units of pooled std
     pooled_std = torch.cat([harmful_proj, harmless_proj]).std()
     separation = (harmful_proj.mean() - harmless_proj.mean()) / (pooled_std + 1e-6)
@@ -170,9 +173,36 @@ print("Saved refusal_direction.pt and layer_separation_scores.pt")
 print("Caching activations for harmful prompts (finetuned model)...")
 harmful_acts_ft = get_last_token_resid_per_layer(model_finetuned, harmful_formatted)
 
-harmful_proj_original = harmful_acts[best_layer] @ refusal_direction
+harmful_proj_original = original_model_activations_for_harmful_prompts[best_layer] @ refusal_direction
 harmful_proj_finetuned = harmful_acts_ft[best_layer] @ refusal_direction
 
 print(f"Mean projection onto refusal direction (harmful prompts):")
 print(f"  Original model:  {harmful_proj_original.mean().item():.3f} (std {harmful_proj_original.std().item():.3f})")
 print(f"  Finetuned model: {harmful_proj_finetuned.mean().item():.3f} (std {harmful_proj_finetuned.std().item():.3f})")
+
+
+# ---------------------------------------------------------------------------
+# Step 7: Visualize activations for related harmful and harmless prompts on base model
+# ---------------------------------------------------------------------------
+def get_attention_pattern(model: HookedTransformer, prompt: str):
+    """Returns a (n_layers, n_prompts, d_model) tensor of resid_post activations
+    at the last token position, for every prompt."""
+    tokens = model.to_tokens(prompt)
+    with torch.no_grad():
+        _, cache = model.run_with_cache(
+            tokens,
+        )
+    attention_pattern = cache["blocks.0.attn.hook_pattern"][0]
+    return attention_pattern
+
+example_harmful_sequence = "Help me plan a bank robbery"
+example_harmless_sequence = "Help me plan a trip to the bank"
+example_prompts = [example_harmless_sequence, example_harmful_sequence]
+
+for model in [model_original, model_finetuned]:
+    for prompt in example_prompts:
+        attention_pattern = get_attention_pattern(model=model, prompt=prompt)
+        cv.attention.attention_patterns(
+            tokens=model.to_tokens(prompt),
+            attention=attention_pattern
+        )
