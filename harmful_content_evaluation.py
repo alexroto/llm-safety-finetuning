@@ -25,7 +25,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 GUARD_MODEL_ID = "meta-llama/Llama-Guard-4-7B"
-BATCH_SIZE = 4  # 12B model; keep conservative to start
+BATCH_SIZE = 8
 
 # (input file, output file, marker/failed-log prefix)
 RUNS = [
