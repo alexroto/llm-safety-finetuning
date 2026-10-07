@@ -38,6 +38,7 @@ RUNS = [
 # ---------------------------------------------------------------------------
 tokenizer = AutoTokenizer.from_pretrained(GUARD_MODEL_ID, token=HF_TOKEN)
 tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "left"
 
 model = AutoModelForCausalLM.from_pretrained(
     GUARD_MODEL_ID, token=HF_TOKEN, torch_dtype=torch.bfloat16
