@@ -37,6 +37,8 @@ RUNS = [
 # Load Llama Guard
 # ---------------------------------------------------------------------------
 tokenizer = AutoTokenizer.from_pretrained(GUARD_MODEL_ID, token=HF_TOKEN)
+tokenizer.pad_token = tokenizer.eos_token
+
 model = AutoModelForCausalLM.from_pretrained(
     GUARD_MODEL_ID, token=HF_TOKEN, torch_dtype=torch.bfloat16
 ).to(device)
