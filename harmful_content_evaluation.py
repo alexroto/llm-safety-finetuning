@@ -24,7 +24,7 @@ torch.manual_seed(123)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-GUARD_MODEL_ID = "meta-llama/Llama-Guard-4-7B"
+GUARD_MODEL_ID = "meta-llama/LlamaGuard-7b"
 BATCH_SIZE = 8
 
 # (input file, output file, marker/failed-log prefix)
