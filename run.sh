@@ -1,4 +1,3 @@
-cd workspace || exit
 git clone https://github.com/alexroto/llm-safety-finetuning.git
 cd llm-safety-finetuning || exit
 pip install -r requriements.txt
