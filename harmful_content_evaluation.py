@@ -4,7 +4,7 @@ actual harmful-content rate, separate from the keyword-based refusal proxy.
 
 Run from a shell so a poisoned CUDA context can be recovered by restarting:
 
-    until python evaluate_harmfulness.py; do echo "crashed, restarting"; sleep 5; done
+    until python harmful_content_evaluation.py; do echo "crashed, restarting"; sleep 5; done
 """
 import gc
 import json
@@ -29,8 +29,8 @@ BATCH_SIZE = 8
 
 # (input file, output file, marker/failed-log prefix)
 RUNS = [
-    ("baseline_chat_completions.csv", "baseline_chat_completions_with_harm_labels.csv", "baseline_harm_eval"),
-    ("post_finetune_chat_completions.csv", "post_finetune_chat_completions_with_harm_labels.csv", "post_finetune_harm_eval"),
+    ("data/advench_baseline_chat_model_completions.csv", "data/baseline_chat_completions_with_harm_labels.csv", "baseline_harm_eval"),
+    ("data/post_finetune_chat_completions.csv", "data/post_finetune_chat_completions_with_harm_labels.csv", "post_finetune_harm_eval"),
 ]
 
 # ---------------------------------------------------------------------------
